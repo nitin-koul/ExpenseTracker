@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .recent-expenses {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .expense-item {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .expense-item:last-child {
+            border-bottom: none;
+        }
+
+        .expense-info {
+            flex: 1;
+        }
+
+        .expense-description {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .expense-details {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .expense-amount {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+
+        .load-btn {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .load-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .settlement-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .settlement-amount {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .owes {
+            color: #e74c3c;
+        }
+
+        .owed {
+            color: #27ae60;
+        }
+
+        .even {
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Expense Dashboard</h1>
+            <p>Your spending insights at a glance</p>
+        </div>
+
+        <button class="load-btn" onclick="loadData()">
+            🔄 Load Latest Data
+        </button>
+
+        <div class="settlement-card">
+            <h3>💰 Settlement Status</h3>
+            <div id="settlementStatus">
+                <div class="settlement-amount even">All settled up! 🎉</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSpent">₹0</div>
+                <div class="stat-label">Total Spent This Month</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="myShare">₹0</div>
+                <div class="stat-label">My Share</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="flatmateShare">₹0</div>
+                <div class="stat-label">Flatmate's Share</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalExpenses">0</div>
+                <div class="stat-label">Total Transactions</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-title">📈 Daily Spending Trend</div>
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">🥧 Category Breakdown</div>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <div class="recent-expenses">
+            <h3 class="chart-title">📝 Recent Expenses</h3>
+            <div id="recentExpensesList">
+                <div class="expense-item">
+                    <div class="expense-info">
+                        <div class="expense-description">Click "Load Latest Data" to see your expenses</div>
+                        <div class="expense-details">Connect your Google Sheet first</div>
+                    </div>
+                    <div class="expense-amount">₹0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let trendChart, categoryChart;
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfvxeCOgXWu6HJNgD17lsWDDIx6MXngP8F1QpXNeKi5mJwIyOk4KTxM8-dNuuj1wow/exec'; // Replace with your URL
+
+        async function loadData() {
+            try {
+
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const result = await response.json();
+                const data = result.data;
+
+                updateDashboard(data);
+                
+            } catch (error) {
+                console.log("Load data failed")
+            }
+        }
+
+        function updateDashboard(data) {
+            if (!data || data.length === 0) {
+                console.log("No data available")
+                return;
+            }
+
+            // Calculate statistics
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            const monthlyData = data.filter(row => {
+                const expenseDate = new Date(row[0]);
+                return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+            });
+
+            const totalSpent = monthlyData.reduce((sum, row) => sum + row[2], 0);
+            const myShare = monthlyData.reduce((sum, row) => sum + row[7], 0);
+            const flatmateShare = monthlyData.reduce((sum, row) => sum + row[8], 0);
+            
+            // Calculate settlement
+            const myPayments = monthlyData.filter(row => row[5] === 'Me').reduce((sum, row) => sum + row[2], 0);
+            const flatmatePayments = monthlyData.filter(row => row[5] === 'Flatmate').reduce((sum, row) => sum + row[2], 0);
+            const settlement = myPayments - myShare - (flatmatePayments - flatmateShare);
+
+            // Update stats
+            document.getElementById('totalSpent').textContent = `₹${totalSpent.toFixed(0)}`;
+            document.getElementById('myShare').textContent = `₹${myShare.toFixed(0)}`;
+            document.getElementById('flatmateShare').textContent = `₹${flatmateShare.toFixed(0)}`;
+            document.getElementById('totalExpenses').textContent = monthlyData.length;
+
+            // Update settlement status
+            updateSettlementStatus(settlement);
+
+            // Update charts
+            updateTrendChart(monthlyData);
+            updateCategoryChart(monthlyData);
+            updateRecentExpenses(data.slice(-10));
+        }
+
+        function updateSettlementStatus(settlement) {
+            const statusEl = document.getElementById('settlementStatus');
+            
+            if (Math.abs(settlement) < 10) {
+                statusEl.innerHTML = '<div class="settlement-amount even">All settled up! 🎉</div>';
+            } else if (settlement > 0) {
+                statusEl.innerHTML = `
+                    <div class="settlement-amount owed">Flatmate owes you</div>
+                    <div class="settlement-amount owed">₹${Math.abs(settlement).toFixed(0)}</div>
+                `;
+            } else {
+                statusEl.innerHTML = `
+                    <div class="settlement-amount owes">You owe flatmate</div>
+                    <div class="settlement-amount owes">₹${Math.abs(settlement).toFixed(0)}</div>
+                `;
+            }
+        }
+
+        function updateTrendChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Group by date
+            const dailyTotals = {};
+            data.forEach(row => {
+                const date = row[0];
+                dailyTotals[date] = (dailyTotals[date] || 0) + row[2];
+            });
+
+            const dates = Object.keys(dailyTotals).sort();
+            const amounts = dates.map(date => dailyTotals[date]);
+
+            if (trendChart) trendChart.destroy();
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates.map(date => new Date(date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Daily Spending',
+                        data: amounts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCategoryChart(data) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            // Group by category
+            const categoryTotals = {};
+            data.forEach(row => {
+                const category = row[3];
+                categoryTotals[category] = (categoryTotals[category] || 0) + row[2];
+            });
+
+            const categories = Object.keys(categoryTotals);
+            const amounts = Object.values(categoryTotals);
+            const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+
+            if (categoryChart) categoryChart.destroy();
+
+            categoryChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: colors.slice(0, categories.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRecentExpenses(data) {
+            const container = document.getElementById('recentExpensesList');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = `
+                    <div class="expense-item">
+                        <div class="expense-info">
+                            <div class="expense-description">No expenses yet</div>
+                            <div class="expense-details">Start logging your expenses!</div>
+                        </div>
+                        <div class="expense-amount">₹0</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const recentExpenses = data.slice(-10).reverse();
+            
+            container.innerHTML = recentExpenses.map(expense => `
+                <div class="expense-item">
+                    <div class="expense-info">
+                        <div class="expense-description">${expense[4]} (${expense[3]})</div>
+                        <div class="expense-details">
+                            ${new Date(expense[0]).toLocaleDateString()} • Paid by ${expense[5]} • ${expense[6] === 'equal' ? 'Split 50/50' : 'Personal'}
+                        </div>
+                    </div>
+                    <div class="expense-amount">₹${expense[2]}</div>
+                </div>
+            `).join('');
+        }
+
+        // Load sample data on page load
+        loadData();
+    </script>
+</body>
+</html>
